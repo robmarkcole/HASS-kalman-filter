@@ -110,7 +110,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_ENTITY_ID): cv.entity_id,
     vol.Optional(CONF_NAME): cv.string,
     vol.Required(CONF_FILTERS): vol.All(cv.ensure_list,
-                                        [vol.Any(FILTER_OUTLIER_SCHEMA,
+                                        [vol.Any(FILTER_KALMAN_SCHEMA,
+                                                 FILTER_OUTLIER_SCHEMA,
                                                  FILTER_LOWPASS_SCHEMA,
                                                  FILTER_TIME_SMA_SCHEMA,
                                                  FILTER_THROTTLE_SCHEMA)])
@@ -358,6 +359,7 @@ class KalmanFilter(Filter):
 
     def _filter_state(self, new_state):
         """Implement the outlier filter."""
+        new_state.state = new_state.state * 1.1  # simple scale for now.
         return new_state
 
 
