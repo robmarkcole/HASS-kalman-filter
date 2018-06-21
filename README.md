@@ -42,3 +42,7 @@ history_graph:
       - sensor.simulated_relative_humidity
       - sensor.kalman_filtered_humidity
 ```
+
+<p align="center">
+<img src="https://github.com/robmarkcole/HASS-kalman-filter/blob/master/usage.png" width="350">
+</p>
