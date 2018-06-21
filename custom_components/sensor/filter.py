@@ -28,6 +28,7 @@ import homeassistant.util.dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
+FILTER_NAME_KALMAN = 'kalman'
 FILTER_NAME_LOWPASS = 'lowpass'
 FILTER_NAME_OUTLIER = 'outlier'
 FILTER_NAME_THROTTLE = 'throttle'
@@ -35,10 +36,12 @@ FILTER_NAME_TIME_SMA = 'time_simple_moving_average'
 FILTERS = Registry()
 
 CONF_FILTERS = 'filters'
+CONF_FILTER_MEASUREMENT_STD = 'measurement_std'
 CONF_FILTER_NAME = 'filter'
 CONF_FILTER_WINDOW_SIZE = 'window_size'
 CONF_FILTER_PRECISION = 'precision'
 CONF_FILTER_RADIUS = 'radius'
+CONF_FILTER_SENSITIVITY = 'sensitivity'
 CONF_FILTER_TIME_CONSTANT = 'time_constant'
 CONF_TIME_SMA_TYPE = 'type'
 
@@ -48,8 +51,10 @@ WINDOW_SIZE_UNIT_NUMBER_EVENTS = 1
 WINDOW_SIZE_UNIT_TIME = 2
 
 DEFAULT_WINDOW_SIZE = 1
+DEFAULT_FILTER_MEASUREMENT_STD = 0.1
 DEFAULT_PRECISION = 2
 DEFAULT_FILTER_RADIUS = 2.0
+DEFAULT_FILTER_SENSITIVITY = 0.5
 DEFAULT_FILTER_TIME_CONSTANT = 10
 
 NAME_TEMPLATE = "{} filter"
@@ -61,6 +66,14 @@ FILTER_SCHEMA = vol.Schema({
 })
 
 # pylint: disable=redefined-builtin
+FILTER_KALMAN_SCHEMA = FILTER_SCHEMA.extend({
+    vol.Required(CONF_FILTER_NAME): FILTER_NAME_KALMAN,
+    vol.Optional(CONF_FILTER_SENSITIVITY,
+                 default=DEFAULT_FILTER_SENSITIVITY): vol.Coerce(float),  # add confine range 0 - 1.
+    vol.Optional(CONF_FILTER_MEASUREMENT_STD,
+                 default=DEFAULT_FILTER_MEASUREMENT_STD): vol.Coerce(float), # add confine range 0 - 1.
+})
+
 FILTER_OUTLIER_SCHEMA = FILTER_SCHEMA.extend({
     vol.Required(CONF_FILTER_NAME): FILTER_NAME_OUTLIER,
     vol.Optional(CONF_FILTER_WINDOW_SIZE,
@@ -322,6 +335,29 @@ class Filter(object):
         filtered.set_precision(self.precision)
         self.states.append(copy(filtered))
         new_state.state = filtered.state
+        return new_state
+
+
+@FILTERS.register(FILTER_NAME_KALMAN)
+class KalmanFilter(Filter):
+    """BASIC 1D Kalman filter.
+
+    Applies a 1D Kalman filter to readings.
+
+    Args:
+        sensitivity (float): The filter sensitivity in range 0 - 1
+        measurement_std (float): The normalised measurement standard
+            deviation in range 0 - 1
+    """
+
+    def __init__(self, sensitivity, measurement_std, precision, entity):
+        """Initialize Filter."""
+        super().__init__(FILTER_NAME_OUTLIER, 1, precision, entity)
+        self._sensitivity = sensitivity
+        self._measurement_std = measurement_std
+
+    def _filter_state(self, new_state):
+        """Implement the outlier filter."""
         return new_state
 
 
