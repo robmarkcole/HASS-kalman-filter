@@ -355,7 +355,8 @@ class KalmanFilter(Filter):
         """Initialize Filter."""
         super().__init__(FILTER_NAME_OUTLIER, 1, precision, entity)
         self._process_var = sensitivity**2
-        self._measurement_var = measurement_std**2
+        self._measurement_std = measurement_std
+        self._measurement_var = None
         self._gaussian = namedtuple('Gaussian', ['mean', 'var'])
         self._x = None  # initial state, will init on first reading.
         self._process_model = self._gaussian(0., self._process_var)
@@ -383,6 +384,8 @@ class KalmanFilter(Filter):
             return new_state
         if self._x is None:  # Now establish the initial state of the filter.
             self._x = self._gaussian(self.states[-1].state, 1000.)
+            self._measurement_var = (
+                self._measurement_std * self.states[-1].state)**2
             return new_state
         # Now into regular operation pf preduct and update.
         self._prior = self._predict(self._x, self._process_model)
