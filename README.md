@@ -12,11 +12,11 @@ sensor:
     entity_id: sensor.simulated_relative_humidity
     filters:
       - filter: kalman
-        sensitivity: 0.5
+        sensitivity: 0.8
         measurement_std: 0.1
 ```
 Configuration variables:
-- **sensitivity**: (Optional, default 0.5) The sensitivity of the filter, in the range 0 - 1. A value of 0 means the filter ignores new values, whilst a value of 1 means the filter takes all new values.
+- **sensitivity**: (Optional, default 0.8) The sensitivity of the filter, in the range 0 - 1. A value of 0 means the filter ignores new values, whilst a value of 1 means the filter takes all new values.
 - **measurement_std**: (Optional, default 0.1) The normalised measurement standard deviation. A sensor which is 10% inaccurate has a value of 0.1
 
 ## Simulated sensor
