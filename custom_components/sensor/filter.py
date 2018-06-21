@@ -6,7 +6,7 @@ https://home-assistant.io/components/sensor.filter/
 """
 import logging
 import statistics
-from collections import deque, Counter
+from collections import deque, Counter, namedtuple
 from numbers import Number
 from functools import partial
 from copy import copy
@@ -354,12 +354,43 @@ class KalmanFilter(Filter):
     def __init__(self, sensitivity, measurement_std, precision, entity):
         """Initialize Filter."""
         super().__init__(FILTER_NAME_OUTLIER, 1, precision, entity)
-        self._sensitivity = sensitivity
-        self._measurement_std = measurement_std
+        self._process_var = sensitivity**2
+        self._measurement_var = measurement_std**2
+        self._gaussian = namedtuple('Gaussian', ['mean', 'var'])
+        self._x = None  # initial state, will init on first reading.
+        self._process_model = self._gaussian(0., self._process_var)
+        self._prior = None
+
+    def _predict(self, posterior, movement):
+        x, P = posterior  # mean and variance of posterior.
+        dx, Q = movement  # mean and variance of movement.
+        x = x + dx
+        P = P + Q
+        return self._gaussian(x, P)
+
+    def _update(self, prior, measurement):
+        x, P = prior        # mean and variance of prior
+        z, R = measurement  # mean and variance of measurement
+        y = z - x        # residual
+        K = P / (P + R)  # Kalman gain
+        x = x + K*y      # posterior
+        P = (1 - K) * P  # posterior variance
+        return self._gaussian(x, P)
 
     def _filter_state(self, new_state):
-        """Implement the outlier filter."""
-        new_state.state = new_state.state * 1.1  # simple scale for now.
+        """Implement the Kalman filter."""
+        if not self.states:  # Ensure we have a previous reading.
+            return new_state
+        if self._x is None:  # Now establish the initial state of the filter.
+            self._x = self._gaussian(self.states[-1].state, 1000.)
+            return new_state
+        # Now into regular operation pf preduct and update.
+        self._prior = self._predict(self._x, self._process_model)
+        self._x = self._update(self._prior,
+                               self._gaussian(
+                                   new_state.state,
+                                   self._measurement_var))
+        new_state.state = self._x.mean
         return new_state
 
 

@@ -28,9 +28,9 @@ sensor:
     name: 'simulated relative humidity'
     unit: '%'
     period: 20
-    amplitude: 25
+    amplitude: 0
     mean: 50
-    spread: 25
+    spread: 5
     seed: 999
 ```
 
@@ -44,5 +44,5 @@ history_graph:
 ```
 
 <p align="center">
-<img src="https://github.com/robmarkcole/HASS-kalman-filter/blob/master/usage.png" width="350">
+<img src="https://github.com/robmarkcole/HASS-kalman-filter/blob/master/usage.png" width="500">
 </p>
