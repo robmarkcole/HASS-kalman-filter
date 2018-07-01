@@ -350,7 +350,9 @@ class KalmanFilter(Filter):
         """Initialize Filter. Process model is gaussian noise."""
         super().__init__(FILTER_NAME_OUTLIER, 1, precision, entity)
         self._gaussian = namedtuple('Gaussian', ['mean', 'error'])
-        self._process_model = self._gaussian(0., (2*sensitivity)**2)
+        process_mean = 0.0
+        process_error = sensitivity**2
+        self._process_model = self._gaussian(process_mean, process_error)
         self._state = None
         self._measurement_error = None
 
@@ -375,7 +377,8 @@ class KalmanFilter(Filter):
     def _filter_state(self, new_state):
         """Implement the Kalman filter."""
         if self._state is None:  # Establish the initial state.
-            self._measurement_error = 0.1 * new_state.state  # Est 10%.
+            error_estimate = 0.1  # Estimate error is 10% of signal.
+            self._measurement_error = error_estimate * new_state.state
             self._state = self._gaussian(
                 new_state.state,
                 self._measurement_error)
