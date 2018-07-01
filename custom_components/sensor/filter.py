@@ -352,7 +352,6 @@ class KalmanFilter(Filter):
         self._gaussian = namedtuple('Gaussian', ['mean', 'error'])
         self._process_model = self._gaussian(0., (2*sensitivity)**2)
         self._state = None
-        self._prior = None
         self._measurement_error = None
 
     def _predict(self, posterior, process_model):
@@ -382,12 +381,12 @@ class KalmanFilter(Filter):
                 self._measurement_error)
             return new_state
         # Now into regular operation of preduct and update.
-        self._prior = self._predict(self._state, self._process_model)
-        self._posterior = self._update(self._prior,
-                                       self._gaussian(
-                                           new_state.state,
-                                           self._measurement_error))
-        new_state.state = self._posterior.mean
+        prior = self._predict(self._state, self._process_model)
+        posterior = self._update(prior,
+                                 self._gaussian(
+                                     new_state.state,
+                                     self._measurement_error))
+        new_state.state = posterior.mean
         return new_state
 
 
