@@ -70,8 +70,6 @@ FILTER_KALMAN_SCHEMA = FILTER_SCHEMA.extend({
     vol.Required(CONF_FILTER_NAME): FILTER_NAME_KALMAN,
     vol.Optional(CONF_FILTER_SENSITIVITY,
                  default=DEFAULT_FILTER_SENSITIVITY): vol.Coerce(float),  # add confine range 0 - 1.
-    vol.Optional(CONF_FILTER_MEASUREMENT_STD,
-                 default=DEFAULT_FILTER_MEASUREMENT_STD): vol.Coerce(float), # add confine range 0 - 1.
 })
 
 FILTER_OUTLIER_SCHEMA = FILTER_SCHEMA.extend({
@@ -351,16 +349,15 @@ class KalmanFilter(Filter):
             deviation in range 0 - 1
     """
 
-    def __init__(self, sensitivity, measurement_std, precision, entity):
+    def __init__(self, sensitivity, precision, entity):
         """Initialize Filter."""
         super().__init__(FILTER_NAME_OUTLIER, 1, precision, entity)
-        self._process_var = sensitivity**2
-        self._measurement_std = measurement_std
-        self._measurement_var = None
         self._gaussian = namedtuple('Gaussian', ['mean', 'var'])
-        self._x = None  # initial state, will init on first reading.
-        self._process_model = self._gaussian(0., self._process_var)
+        process_variance = (2*sensitivity)**2
+        self._process_model = self._gaussian(0., process_variance)
+        self._state = None  # initial state, will init on first reading.
         self._prior = None
+        self._measurement_var = None
 
     def _predict(self, posterior, movement):
         x, P = posterior  # mean and variance of posterior.
@@ -380,20 +377,19 @@ class KalmanFilter(Filter):
 
     def _filter_state(self, new_state):
         """Implement the Kalman filter."""
-        if not self.states:  # Ensure we have a previous reading.
-            return new_state
-        if self._x is None:  # Now establish the initial state of the filter.
-            self._x = self._gaussian(self.states[-1].state, 1000.)
-            self._measurement_var = (
-                self._measurement_std * self.states[-1].state)**2
+        if self._state is None:  # Now establish the initial state.
+            self._measurement_var = 0.1 * new_state.state  # Est variance 10%.
+            self._state = self._gaussian(
+                new_state.state,
+                self._measurement_var)
             return new_state
         # Now into regular operation pf preduct and update.
-        self._prior = self._predict(self._x, self._process_model)
-        self._x = self._update(self._prior,
-                               self._gaussian(
-                                   new_state.state,
-                                   self._measurement_var))
-        new_state.state = self._x.mean
+        self._prior = self._predict(self._state, self._process_model)
+        self._state = self._update(self._prior,
+                                   self._gaussian(
+                                       new_state.state,
+                                       self._measurement_var))
+        new_state.state = self._state.mean
         return new_state
 
 

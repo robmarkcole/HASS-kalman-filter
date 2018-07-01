@@ -13,11 +13,9 @@ sensor:
     filters:
       - filter: kalman
         sensitivity: 0.8
-        measurement_std: 0.1
 ```
 Configuration variables:
-- **sensitivity**: (Optional, default 0.8) The sensitivity of the filter, in the range 0 - 1. A value of 0 means the filter ignores new values, whilst a value of 1 means the filter takes all new values.
-- **measurement_std**: (Optional, default 0.1) The normalised measurement standard deviation. A sensor which is 10% inaccurate has a value of 0.1
+- **sensitivity**: (Optional, default 0.8) The sensitivity of the filter, in the range 0 - 1, with 0 being low sensitivity, and 1 being high sensitivity.
 
 ## Simulated sensor
 I am using a simulated sensor to generate the input data:
