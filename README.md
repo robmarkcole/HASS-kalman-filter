@@ -1,5 +1,5 @@
 # HASS-kalman-filter
-Home-Assistant custom component adding a 1D Kalman filter. The defaul config options should give reasonable performance. If you wish top tweak the options you should first read this reference to understand the Kalman filter concept.
+Home-Assistant custom component adding a [1D Kalman filter](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python/blob/master/04-One-Dimensional-Kalman-Filters.ipynb). Some experimentation of the `sensitivity` of the filter may be required. 
 
 Place the `custom_components` folder in your configuration directory (or add its contents to an existing `custom_components` folder).
 

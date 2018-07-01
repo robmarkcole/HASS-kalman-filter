@@ -51,7 +51,6 @@ WINDOW_SIZE_UNIT_NUMBER_EVENTS = 1
 WINDOW_SIZE_UNIT_TIME = 2
 
 DEFAULT_WINDOW_SIZE = 1
-DEFAULT_FILTER_MEASUREMENT_STD = 0.1
 DEFAULT_PRECISION = 2
 DEFAULT_FILTER_RADIUS = 2.0
 DEFAULT_FILTER_SENSITIVITY = 0.8
@@ -69,7 +68,7 @@ FILTER_SCHEMA = vol.Schema({
 FILTER_KALMAN_SCHEMA = FILTER_SCHEMA.extend({
     vol.Required(CONF_FILTER_NAME): FILTER_NAME_KALMAN,
     vol.Optional(CONF_FILTER_SENSITIVITY,
-                 default=DEFAULT_FILTER_SENSITIVITY): vol.Coerce(float),  # add confine range 0 - 1.
+                 default=DEFAULT_FILTER_SENSITIVITY): vol.Coerce(float),
 })
 
 FILTER_OUTLIER_SCHEMA = FILTER_SCHEMA.extend({
@@ -345,51 +344,50 @@ class KalmanFilter(Filter):
 
     Args:
         sensitivity (float): The filter sensitivity in range 0 - 1
-        measurement_std (float): The normalised measurement standard
-            deviation in range 0 - 1
     """
 
     def __init__(self, sensitivity, precision, entity):
-        """Initialize Filter."""
+        """Initialize Filter. Process model is gaussian noise."""
         super().__init__(FILTER_NAME_OUTLIER, 1, precision, entity)
-        self._gaussian = namedtuple('Gaussian', ['mean', 'var'])
-        process_variance = (2*sensitivity)**2
-        self._process_model = self._gaussian(0., process_variance)
-        self._state = None  # initial state, will init on first reading.
+        self._gaussian = namedtuple('Gaussian', ['mean', 'error'])
+        self._process_model = self._gaussian(0., (2*sensitivity)**2)
+        self._state = None
         self._prior = None
-        self._measurement_var = None
+        self._measurement_error = None
 
-    def _predict(self, posterior, movement):
-        x, P = posterior  # mean and variance of posterior.
-        dx, Q = movement  # mean and variance of movement.
-        x = x + dx
-        P = P + Q
-        return self._gaussian(x, P)
+    def _predict(self, posterior, process_model):
+        """Predict from posterior and process model."""
+        posterior_mean, posterior_error = posterior
+        process_mean, process_error = process_model
+        prior_state = posterior_mean + process_mean
+        prior_error = posterior_error + process_error
+        return self._gaussian(prior_state, prior_error)
 
     def _update(self, prior, measurement):
-        x, P = prior        # mean and variance of prior
-        z, R = measurement  # mean and variance of measurement
-        y = z - x        # residual
-        K = P / (P + R)  # Kalman gain
-        x = x + K*y      # posterior
-        P = (1 - K) * P  # posterior variance
-        return self._gaussian(x, P)
+        """Calculate posterior from prior and measurement."""
+        prior_mean, prior_error = prior
+        measurement_mean, measurement_error = measurement
+        residual = measurement_mean - prior_mean
+        kalman_gain = prior_error / (prior_error + measurement_error)
+        posterior_mean = prior_mean + kalman_gain*residual
+        posterior_error = (1 - kalman_gain) * prior_error
+        return self._gaussian(posterior_mean, posterior_error)
 
     def _filter_state(self, new_state):
         """Implement the Kalman filter."""
-        if self._state is None:  # Now establish the initial state.
-            self._measurement_var = 0.1 * new_state.state  # Est variance 10%.
+        if self._state is None:  # Establish the initial state.
+            self._measurement_error = 0.1 * new_state.state  # Est 10%.
             self._state = self._gaussian(
                 new_state.state,
-                self._measurement_var)
+                self._measurement_error)
             return new_state
-        # Now into regular operation pf preduct and update.
+        # Now into regular operation of preduct and update.
         self._prior = self._predict(self._state, self._process_model)
-        self._state = self._update(self._prior,
-                                   self._gaussian(
-                                       new_state.state,
-                                       self._measurement_var))
-        new_state.state = self._state.mean
+        self._posterior = self._update(self._prior,
+                                       self._gaussian(
+                                           new_state.state,
+                                           self._measurement_error))
+        new_state.state = self._posterior.mean
         return new_state
 
 
