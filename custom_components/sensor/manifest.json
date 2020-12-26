@@ -1,0 +1,8 @@
+{
+  "domain": "filter",
+  "name": "Filter",
+  "documentation": "https://github.com/vladkozlov69/HASS-kalman-filter",
+  "dependencies": ["history"],
+  "codeowners": ["@dgomes","@vladkozlov69"],
+  "quality_scale": "internal"
+}
